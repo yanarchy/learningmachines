@@ -18,4 +18,14 @@ neuralNetRouter.get('/loadAndTestBrain', function(req, res) {
   neuralNetLogic.loadAndTestBrain(req, res);
 });
 
+neuralNetRouter.get('/kagglePredict', function(req, res) {
+  console.log('heard a request to kagglePredict');
+  neuralNetLogic.kagglePredict(req, res);
+});
+
+neuralNetRouter.get('/kaggleTrain', function(req, res) {
+  console.log('heard a request to kaggleTrain');
+  neuralNetLogic.kaggleTrain(req, res);
+});
+
 module.exports = neuralNetRouter;
