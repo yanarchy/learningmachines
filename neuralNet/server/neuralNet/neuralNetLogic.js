@@ -7,7 +7,7 @@ var brain = require('brain');
 //TODO: your code here to create a new neural net instance
 // SOLUTION CODE BELOW
 var net = new brain.NeuralNetwork({
-  hiddenLayers:[200,200,20], //Use the docs to explore various numbers you might want to use here
+  hiddenLayers:[10,10,10], //Use the docs to explore various numbers you might want to use here
   learningRate:0.3
 });
 
@@ -46,7 +46,7 @@ module.exports = {
     // SOLUTION CODE BELOW:
     var writeInfo = net.train(trainingData,{
       errorThresh: 0.05,  // error threshold to reach
-      iterations: 1000,   // maximum training iterations
+      iterations: 200,   // maximum training iterations
       log: true,           // console.log() progress periodically
       logPeriod: 1,       // number of iterations between logging
       learningRate: 0.3    // learning rate
@@ -264,8 +264,4 @@ module.exports = {
     });
   },
 
-<<<<<<< HEAD
 };
-=======
-};
->>>>>>> 13a7391e5c2a295f0c05476e0a6f87dcf3158339
