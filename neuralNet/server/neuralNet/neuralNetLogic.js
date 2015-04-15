@@ -5,6 +5,12 @@ var fs = require('fs');
 var brain = require('brain');
 
 //TODO: your code here to create a new neural net instance
+// SOLUTION CODE BELOW
+var net = new brain.NeuralNetwork({
+  hiddenLayers:[200,200,20], //Use the docs to explore various numbers you might want to use here
+  learningRate:0.3
+});
+
 
 module.exports = {
   // this is our main entry point
@@ -37,15 +43,23 @@ module.exports = {
     console.log('Training your very own Brain');
 
     //TODO: Your code here to train the neural net
+    // SOLUTION CODE BELOW:
+    var writeInfo = net.train(trainingData,{
+      errorThresh: 0.05,  // error threshold to reach
+      iterations: 1000,   // maximum training iterations
+      log: true,           // console.log() progress periodically
+      logPeriod: 1,       // number of iterations between logging
+      learningRate: 0.3    // learning rate
+    });
 
+    console.log('writeInfo', writeInfo);
 
     console.timeEnd('trainBrain');
 
     // once we've trained the brain, write it to json to back it up
     var jsonBackup = net.toJSON();
-    console.log(jsonBackup);
     var runBackup = net.toFunction();
-    module.exports.writeBrain(jsonBackup);
+    module.exports.writeBrain(jsonBackup, writeInfo);
 
     // now test the results and see how our machine did!
     module.exports.testBrain(testingData);
@@ -74,7 +88,10 @@ module.exports = {
         nnPredictions: { defaulted: 0.34634397489904356 } }
       */
 
-    
+    // SOLUTION CODE BELOW
+    for(var i = 0; i < testData.length; i++) {
+      testData[i].nnPredictions = net.run(testData[i].input);
+    }
 
     // everything below is formatting the output
     // first we create a results obj with keys labeled 0 to 100
@@ -101,7 +118,7 @@ module.exports = {
 
     //We don't like to assume the keys are going to be ordered, but it's a time-saving shortcut to make at the moment, and the consequences are very low if it's not perfectly ordered
     for(var key in results) {
-      console.log(key + '- nnCount: ' + results[key].nnCount + ' defaulted: ' + results[key].defaulted + ' Default Rate: ' + Math.round(results[key].defaulted/results[key].nnCount * 100) );
+      console.log(key + '- nnCount: ' + results[key].nnCount + ' defaulted: ' + results[key].defaulted + ' Default Rate: ' + Math.round(results[key].defaulted/results[key].nnCount * 100) + '%' );
     }
     console.timeEnd('testBrain');
 
@@ -118,6 +135,7 @@ module.exports = {
       var item = data[i];
 
       var obs = {};
+      obs.id = item.id;
       obs.input = {};
       obs.output = {
         defaulted: item.seriousDelinquency
@@ -153,9 +171,12 @@ module.exports = {
 
   //Writes the neural net to a file for backup
   //You can ignore this 
-  writeBrain: function(json) {
-    var fileName = 'hiddenLayers' + net.hiddenSizes + 'learningRate' + net.learningRate + new Date().getTime();
-    fs.writeFile(fileName, JSON.stringify(json), function(err) {
+  writeBrain: function(backupJson, info) {
+    console.log('net inside writeBrain');
+    console.log(net)
+    info = info ? info : ''
+    var fileName = 'hiddenLayers' + net.hiddenSizes + 'learningRate' + net.learningRate + new Date().getTime(); //add in iterations and observed error
+    fs.writeFile(fileName, JSON.stringify(backupJson), function(err) {
       if(err) {
         console.error('sad, did not write to file');
       } else {
@@ -184,6 +205,63 @@ module.exports = {
 
       }
     });
-  }
+  },
+
+  kagglePredict: function(req, res) {
+    db.query('SELECT * FROM submission', function(err, response) {
+      if(err) {
+        console.error(err);
+      } else {
+        var formattedData = module.exports.formatData(response);
+        var netName = 'hiddenLayers9,40,50,80learningRate0.31428981244655';
+        fs.readFile(netName, 'utf8', function(err, data) {
+          if(err) {
+            console.error(err);
+          } else {
+            net.fromJSON(JSON.parse(data));
+            res.send('Loaded the brain! Testing it now.')
+            var results = [];
+            results.push('id');
+            results.push('prediction');
+            results.push('\n');
+            for (var i = 0; i < formattedData.length; i++) {
+              results. push(formattedData[i].id);
+              results.push(net.run(formattedData[i].input).defaulted);
+              results.push('\n');
+            }
+            var predictionFileName = 'kagglePredictions' + netName + '.csv';
+            fs.writeFile(predictionFileName, results.join(','), function(err) {
+              if(err) {
+                console.log('did not write to file successfully');
+              } else {
+                console.log('wrote predictions to file successfully!');
+              }
+            })
+            // console.log(results.join(','));
+            // module.exports.testBrain(formattedData);
+          }
+        });
+
+      }
+    });
+  },
+
+  kaggleTrain: function(req,res) {
+    // grab all the data from the db
+    db.query('SELECT * FROM neuralNet', function(err, response) {
+      if(err) {
+        console.error(err);
+      } else {
+        // for Kaggle, we will train the brain on the entire dataset
+        // just for fun, we'll also "test" it on the entire dataset
+        // because the real test is the submission file. this "test" is just for the fun of having something appear in our console
+        var formattedData = module.exports.formatData(response);
+        var testing = formattedData;
+
+        // pass this formatted data into trainBrain
+        module.exports.trainBrain(formattedData, testing);
+      }
+    });
+  },
 
 };
